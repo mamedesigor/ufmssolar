@@ -1,7 +1,7 @@
 """ Helper script for downloading data from sems portal and ploting graphs """
 import json
 import requests
-from config import args
+from pyufms.config import args
 
 API_URL = "https://www.semsportal.com/api/"
 
@@ -21,7 +21,3 @@ def login() -> None:
 
 def main() -> None:
     login()
-
-
-if __name__ == "__main__":
-    main()
