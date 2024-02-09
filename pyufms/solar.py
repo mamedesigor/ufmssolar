@@ -3,7 +3,9 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+import openpyxl
 import requests
+import xlrd
 from pyufms.config import ARGS, INVERTERS_INFO
 from pyufms.inverters import Inverter
 
@@ -70,12 +72,51 @@ def get_excel_file_path(start: datetime, end: datetime, inverter: Inverter) -> s
     return file_path
 
 
+def clean_excel(xls_path: str, inverter: Inverter) -> None:
+    xls_book = xlrd.open_workbook(xls_path)
+    xls_sheet = xls_book.sheet_by_index(0)
+
+    xlsx_book = openpyxl.Workbook()
+    xlsx_sheet = xlsx_book.active
+    xlsx_sheet.title = inverter.name
+
+    # TABLE HEADER
+    row = xls_sheet.row(2)
+    cells = len(row)
+    for i in range(cells):
+        cell = str(row[i]).split("'")[1]
+        xlsx_sheet.cell(row=1, column=i + 1).value = cell
+
+    # CELLS
+    for xls_row in range(3, xls_sheet.nrows):
+        row = xls_sheet.row(xls_row)
+
+        time_str = str(row[0]).split("'")[1]
+        time_obj = datetime.strptime(time_str, "%d/%m/%y %H:%M:%S")
+        xlsx_sheet.cell(row=xls_row - 1, column=1).value = time_obj
+
+        cells = len(row)
+        for i in range(1, cells):
+            cell = str(row[i]).split("'")[1]
+            cell_text = cell
+            try:
+                cell = float(cell)
+            except ValueError:
+                cell = cell_text
+
+            xlsx_sheet.cell(row=xls_row - 1, column=i + 1).value = cell
+
+    xlsx_book.save(xls_path.split(".")[0] + ".xlsx")
+    Path.unlink(Path(xls_path))
+
+
 def get_excel(start: datetime, end: datetime, inverter: Inverter) -> None:
     file_path = get_excel_file_path(start, end, inverter)
     response = requests.get(file_path)
     response.raise_for_status()
     path_to_save = Path(start.strftime("%d_%m_%Y-") + inverter.name + ".xls")
     path_to_save.write_bytes(response.content)
+    clean_excel(path_to_save.name, inverter)
 
 
 def main() -> None:
