@@ -25,6 +25,29 @@ def login() -> None:
     headers["Token"] = json.dumps(Token)
 
 
+def get_status(inverter: Inverter) -> dict:
+    inverter_info = INVERTERS_INFO.get(inverter)
+    if inverter_info is None:
+        raise Exception("Error getting inverter's info: " + inverter.name)
+    station_id = inverter_info.get("station_id")
+    if station_id is None:
+        raise Exception("Error getting inverter's station_id: " + inverter.name)
+    sn = inverter_info.get("sn")
+    if sn is None:
+        raise Exception("Error getting inverter's sn: " + inverter.name)
+
+    url = API_URL + "v3/PowerStation/GetInverterAllPoint"
+    payload = {"powerStationId": station_id}
+    response = requests.post(url, headers=headers, json=payload)
+    data = response.json().get("data")
+    inv_list = data.get("inverterPoints")
+    for inv in inv_list:
+        if inv.get("sn") == sn:
+            return inv
+
+    return {}
+
+
 def get_excel_payload(start: datetime, end: datetime, station_id: str, sn: str) -> dict:
     return {
         "tm_content": {
