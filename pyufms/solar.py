@@ -48,6 +48,18 @@ def get_status(inverter: Inverter) -> dict:
     return {}
 
 
+def verify_inv_names() -> None:
+    login()
+    for inverter in Inverter:
+        inv_info = INVERTERS_INFO.get(inverter)
+        if inv_info:
+            fake_name = inv_info.get("fake_name")
+            sn = inv_info.get("sn")
+            if sn is not None:
+                name = get_status(inverter).get("name")
+                print(str(name) + "  <--->  " + str(fake_name))
+
+
 def get_excel_payload(start: datetime, end: datetime, station_id: str, sn: str) -> dict:
     return {
         "tm_content": {
