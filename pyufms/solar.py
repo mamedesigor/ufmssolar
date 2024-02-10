@@ -189,7 +189,20 @@ def get_excel(start: datetime, end: datetime, inverter: Inverter) -> None:
     response.raise_for_status()
     path_to_save = Path(start.strftime("%d_%m_%Y-") + inverter.name + ".xls")
     path_to_save.write_bytes(response.content)
-    clean_excel(path_to_save.name, inverter)
+    try:
+        clean_excel(path_to_save.name, inverter)
+    except Exception:
+        print("Error cleaning XLS, probably empty file:  " + path_to_save.name)
+
+
+def get_s1_excel_for_day(day: datetime) -> None:
+    end = datetime(day.year, day.month, day.day + 1)
+    for inverter in Inverter:
+        inv_info = INVERTERS_INFO.get(inverter)
+        if inv_info:
+            sn = inv_info.get("sn")
+            if sn is not None:
+                get_excel(day, end, inverter)
 
 
 def main() -> None:
