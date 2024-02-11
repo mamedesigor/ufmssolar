@@ -252,4 +252,4 @@ def publish_s1_data_for_day(day: datetime) -> None:
 
 def main() -> None:
     login()
-    publish_s1_data_for_day(datetime(2024, 1, 1))
+    publish_s1_data_for_day(datetime(2024, 1, 2))
