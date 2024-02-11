@@ -58,4 +58,5 @@ def plot_power(xlsx_path: str) -> Path:
     fig = plt.gcf()
     fig.set_size_inches(20, 10)
     plt.savefig(image_path, bbox_inches="tight", dpi=100)
+    plt.clf()
     return Path(image_path)
