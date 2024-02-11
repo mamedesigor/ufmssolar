@@ -194,8 +194,9 @@ def get_excel(start: datetime, end: datetime, inverter: Inverter) -> Path:
     try:
         return clean_excel(path_to_save.name, inverter)
     except Exception:
-        print("Error cleaning XLS, probably empty file:  " + path_to_save.name)
-    return path_to_save
+        raise Exception(
+            "Error cleaning XLS, probably empty file:  " + path_to_save.name
+        )
 
 
 def get_s1_excel_for_day(day: datetime) -> None:
@@ -205,7 +206,10 @@ def get_s1_excel_for_day(day: datetime) -> None:
         if inv_info:
             sn = inv_info.get("sn")
             if sn is not None:
-                get_excel(day, end, inverter)
+                try:
+                    get_excel(day, end, inverter)
+                except Exception as e:
+                    print(e)
 
 
 def main() -> None:
