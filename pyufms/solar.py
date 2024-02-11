@@ -238,22 +238,18 @@ def publish_inverter_data_for_day(day: datetime, inverter: Inverter) -> None:
     markdown_path.write_text(markdown_str)
 
 
-def get_s1_excel_for_day(day: datetime) -> None:
-    end = datetime(day.year, day.month, day.day + 1)
+def publish_s1_data_for_day(day: datetime) -> None:
     for inverter in Inverter:
         inv_info = INVERTERS_INFO.get(inverter)
         if inv_info:
             sn = inv_info.get("sn")
             if sn is not None:
                 try:
-                    get_excel(day, end, inverter)
+                    publish_inverter_data_for_day(day, inverter)
                 except Exception as e:
                     print(e)
 
 
 def main() -> None:
     login()
-    try:
-        publish_inverter_data_for_day(datetime(2024, 1, 1), Inverter.S1_BL11)
-    except Exception as e:
-        print(e)
+    publish_s1_data_for_day(datetime(2024, 1, 1))
