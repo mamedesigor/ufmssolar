@@ -227,7 +227,13 @@ def publish_inverter_data_for_day(day: datetime, inverter: Inverter) -> None:
     image_path.rename(image_path_new)
 
     # markdown
-    markdown_str = "![My Image]({})".format(image_path)
+    markdown_table_1 = "| Inversor | Dia |\n"
+    markdown_table_2 = "|----------|-----|\n"
+    markdown_table_3 = "| {}       | {}  |".format(inverter.name, day.date())
+    markdown_plot = "![My Image]({})\n".format(image_path)
+    markdown_str = (
+        markdown_plot + markdown_table_1 + markdown_table_2 + markdown_table_3
+    )
     markdown_path = Path(dir + "README.md")
     markdown_path.write_text(markdown_str)
 
@@ -246,6 +252,7 @@ def get_s1_excel_for_day(day: datetime) -> None:
 
 
 def main() -> None:
+    login()
     try:
         publish_inverter_data_for_day(datetime(2024, 1, 1), Inverter.S1_BL11)
     except Exception as e:
