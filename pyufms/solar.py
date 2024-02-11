@@ -145,7 +145,7 @@ def get_excel_file_path(start: datetime, end: datetime, inverter: Inverter) -> s
     return file_path
 
 
-def clean_excel(xls_path: str, inverter: Inverter) -> None:
+def clean_excel(xls_path: str, inverter: Inverter) -> Path:
     xls_book = xlrd.open_workbook(xls_path)
     xls_sheet = xls_book.sheet_by_index(0)
 
@@ -179,8 +179,10 @@ def clean_excel(xls_path: str, inverter: Inverter) -> None:
 
             xlsx_sheet.cell(row=xls_row - 1, column=i + 1).value = cell
 
-    xlsx_book.save(xls_path.split(".")[0] + ".xlsx")
+    path_to_save = Path(xls_path.split(".")[0] + ".xlsx")
+    xlsx_book.save(path_to_save)
     Path.unlink(Path(xls_path))
+    return path_to_save
 
 
 def get_excel(start: datetime, end: datetime, inverter: Inverter) -> Path:
@@ -190,7 +192,7 @@ def get_excel(start: datetime, end: datetime, inverter: Inverter) -> Path:
     path_to_save = Path(start.strftime("%d_%m_%Y-") + inverter.name + ".xls")
     path_to_save.write_bytes(response.content)
     try:
-        clean_excel(path_to_save.name, inverter)
+        return clean_excel(path_to_save.name, inverter)
     except Exception:
         print("Error cleaning XLS, probably empty file:  " + path_to_save.name)
     return path_to_save
