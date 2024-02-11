@@ -52,4 +52,7 @@ def plot_power(xlsx_path: str) -> None:
     )
     ax.set_ylim(0, ymax + 5)
 
-    plt.show()
+    image_path = xlsx_path.split(".")[0] + ".png"
+    fig = plt.gcf()
+    fig.set_size_inches(20, 10)
+    plt.savefig(image_path, bbox_inches="tight", dpi=100)
