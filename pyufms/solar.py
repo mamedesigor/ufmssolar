@@ -37,16 +37,11 @@ def get_status(inverter: Inverter) -> dict:
     if sn is None:
         raise Exception("Error getting inverter's sn: " + inverter.name)
 
-    url = API_URL + "v3/PowerStation/GetInverterAllPoint"
-    payload = {"powerStationId": station_id}
+    url = API_URL + "v3/PowerStation/GetInverterPoint"
+    payload = {"powerStationId": station_id, "sn": sn}
     response = requests.post(url, headers=headers, json=payload)
-    data = response.json().get("data")
-    inv_list = data.get("inverterPoints")
-    for inv in inv_list:
-        if inv.get("sn") == sn:
-            return inv
-
-    return {}
+    data = response.json().get("data")[0]
+    return data
 
 
 def verify_inv_names() -> None:
