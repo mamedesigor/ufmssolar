@@ -1,9 +1,11 @@
-import openpyxl
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+import openpyxl
 from matplotlib.dates import DateFormatter
 
 
-def plot_power(xlsx_path: str) -> None:
+def plot_power(xlsx_path: str) -> Path:
     book = openpyxl.load_workbook(xlsx_path)
     sheet = book.active
 
@@ -56,3 +58,4 @@ def plot_power(xlsx_path: str) -> None:
     fig = plt.gcf()
     fig.set_size_inches(20, 10)
     plt.savefig(image_path, bbox_inches="tight", dpi=100)
+    return Path(image_path)
