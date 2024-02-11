@@ -8,6 +8,7 @@ import requests
 import xlrd
 from pyufms.config import ARGS, INVERTERS_INFO
 from pyufms.inverters import Inverter
+from pyufms.plot import plot_power
 
 API_URL = "https://www.semsportal.com/api/"
 
@@ -199,6 +200,43 @@ def get_excel(start: datetime, end: datetime, inverter: Inverter) -> Path:
         )
 
 
+def publish_inverter_data_for_day(day: datetime, inverter: Inverter) -> None:
+    end = datetime(day.year, day.month, day.day + 1)
+    try:
+        xlsx_path = get_excel(day, end, inverter)
+    except Exception as e:
+        raise Exception("Error publishing " + inverter.name + "\n" + str(e)) from e
+
+    image_path = plot_power(xlsx_path.name)
+
+    # create dir for storing data
+    dir = (
+        "data/s1/"
+        + str(day.year)
+        + "/"
+        + str(day.month)
+        + "/"
+        + str(day.day)
+        + "/"
+        + inverter.name
+        + "/"
+    )
+    Path(dir).mkdir(parents=True, exist_ok=True)
+
+    # move xlsx to corresponding dir
+    xlsx_path_new = Path(dir + xlsx_path.name)
+    xlsx_path.rename(xlsx_path_new)
+
+    # move image (plot) to corresponding dir
+    image_path_new = Path(dir + image_path.name)
+    image_path.rename(image_path_new)
+
+    # markdown
+    markdown_str = "![My Image]({})".format(image_path)
+    markdown_path = Path(dir + "README.md")
+    markdown_path.write_text(markdown_str)
+
+
 def get_s1_excel_for_day(day: datetime) -> None:
     end = datetime(day.year, day.month, day.day + 1)
     for inverter in Inverter:
@@ -213,11 +251,7 @@ def get_s1_excel_for_day(day: datetime) -> None:
 
 
 def main() -> None:
-    start = datetime(2024, 1, 5)
-    end = datetime(2024, 1, 6)
-    inverter = Inverter.S1_BL11
-    login()
     try:
-        get_excel(start, end, inverter)
+        publish_inverter_data_for_day(datetime(2024, 1, 1), Inverter.S1_BL11)
     except Exception as e:
         print(e)
