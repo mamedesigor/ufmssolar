@@ -183,7 +183,7 @@ def clean_excel(xls_path: str, inverter: Inverter) -> None:
     Path.unlink(Path(xls_path))
 
 
-def get_excel(start: datetime, end: datetime, inverter: Inverter) -> None:
+def get_excel(start: datetime, end: datetime, inverter: Inverter) -> Path:
     file_path = get_excel_file_path(start, end, inverter)
     response = requests.get(file_path)
     response.raise_for_status()
@@ -193,6 +193,7 @@ def get_excel(start: datetime, end: datetime, inverter: Inverter) -> None:
         clean_excel(path_to_save.name, inverter)
     except Exception:
         print("Error cleaning XLS, probably empty file:  " + path_to_save.name)
+    return path_to_save
 
 
 def get_s1_excel_for_day(day: datetime) -> None:
