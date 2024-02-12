@@ -196,7 +196,7 @@ def get_excel(start: datetime, end: datetime, inverter: Inverter) -> Path:
 
 
 def publish_inverter_data_for_day(day: datetime, inverter: Inverter) -> None:
-    end = datetime(day.year, day.month, day.day + 1)
+    end = datetime(day.year, day.month, day.day, 22, 0, 0)
     try:
         xlsx_path = get_excel(day, end, inverter)
     except Exception as e:
@@ -239,13 +239,17 @@ def publish_s1_data_for_day(day: datetime, skip: tuple) -> None:
         if inv_info:
             sn = inv_info.get("sn")
             if sn is not None:
-                try:
-                    print("Publishing data for: " + inverter.name)
-                    publish_inverter_data_for_day(day, inverter)
-                    update_inverter_readme_for_day(day, inverter)
-                    publish_count += 1
-                except Exception as e:
-                    print(e)
+                for attempt in range(5):
+                    try:
+                        print("Publishing data for: " + inverter.name)
+                        publish_inverter_data_for_day(day, inverter)
+                        update_inverter_readme_for_day(day, inverter)
+                        publish_count += 1
+                    except Exception as e:
+                        print(e)
+                        print("Retrying...")
+                    else:
+                        break
     print("published {}/{} inverter data for s1".format(publish_count, publish_max))
 
 
@@ -307,4 +311,4 @@ def update_inverter_readme_for_day(day: datetime, inverter: Inverter) -> None:
 def main() -> None:
     skip = (Inverter.S1_BL13_2, Inverter.S1_BL4)
     login()
-    publish_s1_data_for_day(datetime(2024, 1, 28), skip)
+    publish_s1_data_for_day(datetime(2024, 1, 31), skip)
