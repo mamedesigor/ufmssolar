@@ -227,11 +227,14 @@ def publish_inverter_data_for_day(day: datetime, inverter: Inverter) -> None:
     image_path.rename(image_path_new)
 
 
-def publish_s1_data_for_day(day: datetime) -> None:
+def publish_s1_data_for_day(day: datetime, skip: tuple) -> None:
     publish_count = 0
     publish_max = len(Inverter)
     print("Start publishing data for s1 - " + day.strftime("%d/%m/%Y"))
     for inverter in Inverter:
+        if inverter in skip:
+            continue
+
         inv_info = INVERTERS_INFO.get(inverter)
         if inv_info:
             sn = inv_info.get("sn")
@@ -302,5 +305,6 @@ def update_inverter_readme_for_day(day: datetime, inverter: Inverter) -> None:
 
 
 def main() -> None:
+    skip = (Inverter.S1_BL13_2, Inverter.S1_BL4)
     login()
-    publish_s1_data_for_day(datetime(2024, 1, 5))
+    publish_s1_data_for_day(datetime(2024, 1, 28), skip)
