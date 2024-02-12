@@ -228,16 +228,22 @@ def publish_inverter_data_for_day(day: datetime, inverter: Inverter) -> None:
 
 
 def publish_s1_data_for_day(day: datetime) -> None:
+    publish_count = 0
+    publish_max = len(Inverter)
+    print("Start publishing data for s1 - " + day.strftime("%d/%m/%Y"))
     for inverter in Inverter:
         inv_info = INVERTERS_INFO.get(inverter)
         if inv_info:
             sn = inv_info.get("sn")
             if sn is not None:
                 try:
+                    print("Publishing data for: " + inverter.name)
                     publish_inverter_data_for_day(day, inverter)
                     update_inverter_readme_for_day(day, inverter)
+                    publish_count += 1
                 except Exception as e:
                     print(e)
+    print("published {}/{} inverter data for s1".format(publish_count, publish_max))
 
 
 def update_inverter_readme_for_day(day: datetime, inverter: Inverter) -> None:
@@ -297,4 +303,4 @@ def update_inverter_readme_for_day(day: datetime, inverter: Inverter) -> None:
 
 def main() -> None:
     login()
-    publish_s1_data_for_day(datetime(2024, 1, 3))
+    publish_s1_data_for_day(datetime(2024, 1, 5))
