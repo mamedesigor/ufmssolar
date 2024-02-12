@@ -226,17 +226,6 @@ def publish_inverter_data_for_day(day: datetime, inverter: Inverter) -> None:
     image_path_new = Path(dir + image_path.name)
     image_path.rename(image_path_new)
 
-    # markdown
-    markdown_table_1 = "| Inversor | Dia |\n"
-    markdown_table_2 = "|----------|-----|\n"
-    markdown_table_3 = "| {}       | {}  |".format(inverter.name, day.date())
-    markdown_plot = "![My Image]({})\n".format(image_path)
-    markdown_str = (
-        markdown_plot + markdown_table_1 + markdown_table_2 + markdown_table_3
-    )
-    markdown_path = Path(dir + "README.md")
-    markdown_path.write_text(markdown_str)
-
 
 def publish_s1_data_for_day(day: datetime) -> None:
     for inverter in Inverter:
@@ -246,10 +235,66 @@ def publish_s1_data_for_day(day: datetime) -> None:
             if sn is not None:
                 try:
                     publish_inverter_data_for_day(day, inverter)
+                    update_inverter_readme_for_day(day, inverter)
                 except Exception as e:
                     print(e)
 
 
+def update_inverter_readme_for_day(day: datetime, inverter: Inverter) -> None:
+    dir = (
+        "data/s1/"
+        + str(day.year)
+        + "/"
+        + str(day.month)
+        + "/"
+        + str(day.day)
+        + "/"
+        + inverter.name
+        + "/"
+    )
+    xlsx_name = day.strftime("%d_%m_%Y-") + inverter.name + ".xlsx"
+    xlsx_path = Path(dir + xlsx_name)
+
+    book = openpyxl.load_workbook(xlsx_path)
+    sheet = book.active
+
+    # get kWh for a day
+    kWh_column = 0
+    for col in range(1, sheet.max_column + 1):
+        if sheet.cell(row=1, column=col).value == "Total Generation(kWh)":
+            kWh_column = col
+            break
+    kWh_0 = sheet.cell(row=2, column=kWh_column).value
+    kWh_1 = sheet.cell(row=sheet.max_row, column=kWh_column).value
+    kWh = kWh_1 - kWh_0
+
+    # get power
+    power = 0
+    data = get_status(inverter)
+    data_dict = data.get("dict", {})
+    data_list = data_dict.get("left")
+    for i in data_list:
+        if i.get("key") == "DeviceParameter_capacity":
+            power = i.get("value")
+            break
+
+    # image path
+    image_name = xlsx_name.split(".")[0] + ".png"
+
+    # markdown
+    markdown_table_1 = "| Inversor | Dia | Potência | kWh    |\n"
+    markdown_table_2 = "| -------- | --- | -------- | ------ |\n"
+    markdown_table_3 = "| {}       | {}  | {}       | {:.2f} |".format(
+        inverter.name, day.date(), power, kWh
+    )
+    markdown_plot = "![My Image]({})\n".format(image_name)
+    markdown_str = (
+        markdown_plot + markdown_table_1 + markdown_table_2 + markdown_table_3
+    )
+    markdown_path = Path(dir + "README.md")
+    markdown_path.write_text(markdown_str)
+
+
 def main() -> None:
     login()
-    publish_s1_data_for_day(datetime(2024, 1, 2))
+    publish_s1_data_for_day(datetime(2024, 1, 3))
