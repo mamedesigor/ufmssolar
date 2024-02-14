@@ -308,6 +308,59 @@ def update_inverter_readme_for_day(day: datetime, inverter: Inverter) -> None:
     markdown_path.write_text(markdown_str)
 
 
+def get_s1_kwh_for_month(month: datetime, skip: tuple) -> dict:
+    start = datetime(month.year, month.month, 1)
+    end = datetime(month.year, month.month, 28)
+    for day in range(end.day, 32):
+        try:
+            end = datetime(month.year, month.month, day)
+        except ValueError:
+            break
+
+    kWh_total = 0
+    kWh_info = {}
+    dir = "data/s1/" + str(start.year) + "/" + str(start.month) + "/"
+
+    for inverter in Inverter:
+        if inverter in skip:
+            continue
+
+        kWh_0 = 0
+        kWh_1 = 0
+
+        # FIRST DAY OF MONTH, FIRST READING
+        xlsx_name = start.strftime("%d_%m_%Y-") + inverter.name + ".xlsx"
+        xlsx_path = Path(dir + str(start.day) + "/" + inverter.name + "/" + xlsx_name)
+
+        book = openpyxl.load_workbook(xlsx_path)
+        sheet = book.active
+
+        # get kWh
+        kWh_column = 0
+        for col in range(1, sheet.max_column + 1):
+            if sheet.cell(row=1, column=col).value == "Total Generation(kWh)":
+                kWh_column = col
+                break
+        kWh_0 = sheet.cell(row=2, column=kWh_column).value
+
+        # LAST DAY OF MONTH, LAST READING
+        xlsx_name = end.strftime("%d_%m_%Y-") + inverter.name + ".xlsx"
+        xlsx_path = Path(dir + xlsx_name)
+        xlsx_path = Path(dir + str(end.day) + "/" + inverter.name + "/" + xlsx_name)
+
+        book = openpyxl.load_workbook(xlsx_path)
+        sheet = book.active
+
+        # get kWh
+        kWh_1 = sheet.cell(row=sheet.max_row, column=kWh_column).value
+        kWh = kWh_1 - kWh_0
+        kWh_info.update({inverter.name: kWh})
+        kWh_total += kWh
+    kWh_info.update({"kWh_total": kWh_total})
+
+    return kWh_info
+
+
 def main() -> None:
     skip = (Inverter.S1_BL13_2, Inverter.S1_BL4)
     login()
