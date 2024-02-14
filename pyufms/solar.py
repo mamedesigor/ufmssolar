@@ -308,6 +308,18 @@ def update_inverter_readme_for_day(day: datetime, inverter: Inverter) -> None:
     markdown_path.write_text(markdown_str)
 
 
+def update_s1_readme_for_month(month: datetime, kwh_info: dict) -> None:
+    markdown_path = Path(
+        "data/s1/" + str(month.year) + "/" + str(month.month) + "/README.md"
+    )
+    markdown_table = "| Inversor | kWh    |\n| -------- | ------ |\n"
+    for key in kwh_info.keys():
+        value = kwh_info.get(key)
+        markdown_line = "| {}       | {:.2f} |\n".format(key, value)
+        markdown_table += markdown_line
+    markdown_path.write_text(markdown_table)
+
+
 def get_s1_kwh_for_month(month: datetime, skip: tuple) -> dict:
     start = datetime(month.year, month.month, 1)
     end = datetime(month.year, month.month, 28)
