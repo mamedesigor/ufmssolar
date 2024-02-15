@@ -8,7 +8,7 @@ import requests
 import xlrd
 from pyufms.config import ARGS, INVERTERS_INFO
 from pyufms.inverters import Inverter
-from pyufms.plot import plot_power
+from pyufms.plot import plot_inverter_kwh_for_day
 
 API_URL = "https://www.semsportal.com/api/"
 
@@ -202,7 +202,7 @@ def publish_inverter_data_for_day(day: datetime, inverter: Inverter) -> None:
     except Exception as e:
         raise Exception("Error publishing " + inverter.name + "\n" + str(e)) from e
 
-    image_path = plot_power(xlsx_path.name)
+    image_path = plot_inverter_kwh_for_day(xlsx_path.name)
 
     # create dir for storing data
     dir = (

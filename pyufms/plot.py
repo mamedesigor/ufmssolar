@@ -5,7 +5,7 @@ import openpyxl
 from matplotlib.dates import DateFormatter
 
 
-def plot_power(xlsx_path: str) -> Path:
+def plot_inverter_kwh_for_day(xlsx_path: str) -> Path:
     book = openpyxl.load_workbook(xlsx_path)
     sheet = book.active
 
