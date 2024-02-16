@@ -408,6 +408,73 @@ def get_s1_kwh_for_month(month: datetime, skip: tuple) -> dict:
     return kWh_info
 
 
+def get_inverter_kwh_for_month(month: datetime, inverter: Inverter) -> dict:
+    kWh_month = {"total": 0, "days": {}}
+    days = {}
+    kWh_total = 0
+    kWh_month_0 = 0
+    kWh_month_1 = 0
+
+    day = datetime(month.year, month.month, 1)
+    for i in range(1, 31 + 1):
+        try:
+            day = datetime(month.year, month.month, i)
+        except ValueError:
+            break
+
+        kWh_day = get_inverter_kwh_for_day(day, inverter)
+        days.update({day.strftime("%d/%m/%Y"): kWh_day})
+
+        # sets first and last valid readings for month
+        kWh_day_0 = kWh_day.get("kWh_0", 0)
+        if kWh_month_0 == 0 and kWh_day_0 != 0:
+            kWh_month_0 = kWh_day_0
+        kWh_day_1 = kWh_day.get("kWh_1", 0)
+        if kWh_day_1 != 0:
+            kWh_month_1 = kWh_day_1
+
+    kWh_total += kWh_month_1 - kWh_month_0
+    kWh_month.update({"total": kWh_total, "days": days})
+
+    return kWh_month
+
+
+def get_inverter_kwh_for_day(day: datetime, inverter: Inverter) -> dict:
+    kWh_info = {"total": 0, "kWh_0": 0, "kWh_1": 0}
+
+    uc = inverter.name.split("_")[0].lower()
+    dir = (
+        "data/{}/".format(uc)
+        + str(day.year)
+        + "/"
+        + str(day.month)
+        + "/"
+        + str(day.day)
+        + "/"
+        + inverter.name
+        + "/"
+    )
+    xlsx_name = day.strftime("%d_%m_%Y-") + inverter.name + ".xlsx"
+    xlsx_path = Path(dir + xlsx_name)
+    if not xlsx_path.exists():
+        return kWh_info
+
+    book = openpyxl.load_workbook(xlsx_path)
+    sheet = book.active
+
+    kWh_column = 0
+    for col in range(1, sheet.max_column + 1):
+        if sheet.cell(row=1, column=col).value == "Total Generation(kWh)":
+            kWh_column = col
+            break
+    kWh_0 = sheet.cell(row=2, column=kWh_column).value
+    kWh_1 = sheet.cell(row=sheet.max_row, column=kWh_column).value
+    total = kWh_1 - kWh_0
+    kWh_info.update({"total": total, "kWh_0": kWh_0, "kWh_1": kWh_1})
+
+    return kWh_info
+
+
 def main() -> None:
     skip = (Inverter.S1_BL13_2, Inverter.S1_BL4)
     login()
