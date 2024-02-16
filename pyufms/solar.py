@@ -8,7 +8,7 @@ import requests
 import xlrd
 from pyufms.config import ARGS, INVERTERS_INFO
 from pyufms.inverters import Inverter
-from pyufms.plot import plot_inverter_kwh_for_day
+from pyufms.plot import plot_inverter_kwh_for_day, plot_inverter_kwh_for_month
 
 API_URL = "https://www.semsportal.com/api/"
 
@@ -186,7 +186,7 @@ def get_excel(start: datetime, end: datetime, inverter: Inverter) -> Path:
     response = requests.get(file_path)
     response.raise_for_status()
     path_to_save = Path(start.strftime("%d_%m_%Y-") + inverter.name + ".xls")
-    path_to_save.write_bytes(response.content)
+    path_to_save.wrie_bytes(response.content)
     try:
         return clean_excel(path_to_save.name, inverter)
     except Exception:
@@ -308,37 +308,62 @@ def update_inverter_readme_for_day(day: datetime, inverter: Inverter) -> None:
     markdown_path.write_text(markdown_str)
 
 
-def update_s1_readme_for_month(month: datetime, kwh_info: dict) -> None:
-    markdown_path = Path(
-        "data/s1/" + str(month.year) + "/" + str(month.month) + "/README.md"
-    )
-    markdown_table = "| Inversor | kWh    |\n| -------- | ------ |\n"
-    for key in kwh_info.keys():
-        value = kwh_info.get(key)
-        markdown_line = "| {}       | {:.2f} |\n".format(key, value)
-        markdown_table += markdown_line
-    markdown_path.write_text(markdown_table)
+def update_s1_readme_for_month(month: datetime, s1_kWh_month_data: dict) -> None:
+    dir = "data/s1/" + str(month.year) + "/" + str(month.month) + "/"
+    Path(dir + "plots/").mkdir(parents=True, exist_ok=True)
+
+    markdown_path = Path(dir + "README.md")
+    summary = "# Resumo\n"
+    summary += "| Inversor | kWh    |\n| -------- | ------ |\n"
+    plots = "# Geração Mensal por Inversor\n"
+
+    inverters = s1_kWh_month_data.get("inverters", {})
+
+    for inverter in inverters.keys():
+        inv_kWh_month_data = inverters.get(inverter, {})
+        inv_kWh_month = inv_kWh_month_data.get("total", 0)
+
+        ## summary
+        summary_line = "| {}       | {:.2f} |\n".format(inverter.name, inv_kWh_month)
+        summary += summary_line
+
+        ## plots
+        image_path_relative = "plots/" + inverter.name + ".png"
+        image_path = dir + image_path_relative
+        plot_inverter_kwh_for_month(image_path, inv_kWh_month_data)
+        plot_line = "## {}\n![My Image]({})\n".format(
+            inverter.name, image_path_relative
+        )
+        plots += plot_line
+
+    kWh_total = s1_kWh_month_data.get("total", 0)
+    summary_line = "| {}       | {:.2f} |\n".format("kWh_total", kWh_total)
+    summary += summary_line
+
+    markdown_path.write_text(summary + plots)
 
 
 def get_s1_kwh_for_month(month: datetime, skip: tuple) -> dict:
-    kWh_info = {}
+    s1_kWh_month_data = {}
+    inverters = {}
     kWh_total = 0
 
     for inverter in Inverter:
         if inverter in skip:
             continue
-        kWh_inverter_month_info = get_inverter_kwh_for_month(month, inverter)
-        kWh_inverter_month = kWh_inverter_month_info.get("total", 0)
-        kWh_info.update({inverter.name: kWh_inverter_month})
-        kWh_total += kWh_inverter_month
+        inv_kWh_month_data = get_inverter_kwh_for_month(month, inverter)
+        inv_kWh_month = inv_kWh_month_data.get("total", 0)
+        inverters.update({inverter: inv_kWh_month_data})
+        kWh_total += inv_kWh_month
 
-    kWh_info.update({"kWh_total": kWh_total})
+    s1_kWh_month_data.update({"inverters": inverters})
+    s1_kWh_month_data.update({"total": kWh_total})
 
-    return kWh_info
+    return s1_kWh_month_data
 
 
 def get_inverter_kwh_for_month(month: datetime, inverter: Inverter) -> dict:
-    kWh_month = {"total": 0, "days": {}}
+    inv_kWh_month_data = {"total": 0, "days": {}}
     days = {}
     kWh_total = 0
     kWh_month_0 = 0
@@ -351,25 +376,25 @@ def get_inverter_kwh_for_month(month: datetime, inverter: Inverter) -> dict:
         except ValueError:
             break
 
-        kWh_day = get_inverter_kwh_for_day(day, inverter)
-        days.update({day.strftime("%d/%m/%Y"): kWh_day})
+        inv_kWh_day_data = get_inverter_kwh_for_day(day, inverter)
+        days.update({day.strftime("%d/%m/%Y"): inv_kWh_day_data})
 
         # sets first and last valid readings for month
-        kWh_day_0 = kWh_day.get("kWh_0", 0)
+        kWh_day_0 = inv_kWh_day_data.get("kWh_0", 0)
         if kWh_month_0 == 0 and kWh_day_0 != 0:
             kWh_month_0 = kWh_day_0
-        kWh_day_1 = kWh_day.get("kWh_1", 0)
+        kWh_day_1 = inv_kWh_day_data.get("kWh_1", 0)
         if kWh_day_1 != 0:
             kWh_month_1 = kWh_day_1
 
     kWh_total += kWh_month_1 - kWh_month_0
-    kWh_month.update({"total": kWh_total, "days": days})
+    inv_kWh_month_data.update({"total": kWh_total, "days": days})
 
-    return kWh_month
+    return inv_kWh_month_data
 
 
 def get_inverter_kwh_for_day(day: datetime, inverter: Inverter) -> dict:
-    kWh_info = {"total": 0, "kWh_0": 0, "kWh_1": 0}
+    inv_kWh_day_data = {"total": 0, "kWh_0": 0, "kWh_1": 0}
 
     uc = inverter.name.split("_")[0].lower()
     dir = (
@@ -386,7 +411,7 @@ def get_inverter_kwh_for_day(day: datetime, inverter: Inverter) -> dict:
     xlsx_name = day.strftime("%d_%m_%Y-") + inverter.name + ".xlsx"
     xlsx_path = Path(dir + xlsx_name)
     if not xlsx_path.exists():
-        return kWh_info
+        return inv_kWh_day_data
 
     book = openpyxl.load_workbook(xlsx_path)
     sheet = book.active
@@ -399,12 +424,14 @@ def get_inverter_kwh_for_day(day: datetime, inverter: Inverter) -> dict:
     kWh_0 = sheet.cell(row=2, column=kWh_column).value
     kWh_1 = sheet.cell(row=sheet.max_row, column=kWh_column).value
     total = kWh_1 - kWh_0
-    kWh_info.update({"total": total, "kWh_0": kWh_0, "kWh_1": kWh_1})
+    inv_kWh_day_data.update({"total": total, "kWh_0": kWh_0, "kWh_1": kWh_1})
 
-    return kWh_info
+    return inv_kWh_day_data
 
 
 def main() -> None:
     skip = (Inverter.S1_BL13_2, Inverter.S1_BL4)
-    login()
-    publish_s1_data_for_day(datetime(2024, 1, 31), skip)
+    # login()
+    # publish_s1_data_for_day(datetime(2024, 1, 31), skip)
+    month = datetime(2024, 1, 1)
+    update_s1_readme_for_month(month, get_s1_kwh_for_month(month, skip))
