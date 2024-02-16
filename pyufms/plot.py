@@ -1,8 +1,9 @@
 from pathlib import Path
+from datetime import datetime
 
 import matplotlib.pyplot as plt
 import openpyxl
-from matplotlib.dates import DateFormatter
+import matplotlib.dates as mdates
 
 
 def plot_inverter_kwh_for_day(xlsx_path: str) -> Path:
@@ -37,7 +38,7 @@ def plot_inverter_kwh_for_day(xlsx_path: str) -> Path:
     plt.title(title)
     plt.plot(x, y)
     plt.grid()
-    fmt = DateFormatter("%H")
+    fmt = mdates.DateFormatter("%H")
     ax = plt.gca()
     ax.xaxis.set_major_formatter(fmt)
 
@@ -60,3 +61,32 @@ def plot_inverter_kwh_for_day(xlsx_path: str) -> Path:
     plt.savefig(image_path, bbox_inches="tight", dpi=100)
     plt.clf()
     return Path(image_path)
+
+
+def plot_inverter_kwh_for_month(image_path: Path, inverter_kwh_info: dict) -> None:
+    data = inverter_kwh_info.get("days")
+    if data is None:
+        print("data for plotting inv kwh for month is invalid")
+        return
+    x = []
+    y = []
+    for key in data:
+        day = datetime.strptime(key, "%d/%m/%Y")
+        x.append(day)
+        y.append(data.get(key).get("total"))
+
+    # customize plot
+    plt.xlabel("Dia")
+    plt.ylabel("Geração (kWh)")
+    title = "Geração mensal " + datetime.strftime(x[0], "%m/%Y")
+    plt.title(title)
+    plt.bar(x, y)
+    plt.grid(axis="y")
+    fmt = mdates.DateFormatter("%d")
+    ax = plt.gca()
+    ax.xaxis.set_major_formatter(fmt)
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=1))
+    fig = plt.gcf()
+    fig.set_size_inches(20, 10)
+    plt.savefig(image_path, bbox_inches="tight", dpi=100)
+    plt.clf()
