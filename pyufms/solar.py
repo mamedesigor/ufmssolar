@@ -186,7 +186,7 @@ def get_excel(start: datetime, end: datetime, inverter: Inverter) -> Path:
     response = requests.get(file_path)
     response.raise_for_status()
     path_to_save = Path(start.strftime("%d_%m_%Y-") + inverter.name + ".xls")
-    path_to_save.wrie_bytes(response.content)
+    path_to_save.write_bytes(response.content)
     try:
         return clean_excel(path_to_save.name, inverter)
     except Exception:
