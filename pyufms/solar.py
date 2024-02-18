@@ -1,6 +1,6 @@
 """ Helper script for downloading data from sems portal and ploting graphs """
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import openpyxl
@@ -427,6 +427,40 @@ def get_inverter_kwh_for_day(day: datetime, inverter: Inverter) -> dict:
     inv_kWh_day_data.update({"total": total, "kWh_0": kWh_0, "kWh_1": kWh_1})
 
     return inv_kWh_day_data
+
+
+def validate_inverter_kwh_for_day(day: datetime, inverter: Inverter) -> None:
+    # get kWh from server
+    inverter_info = INVERTERS_INFO.get(inverter, {})
+    sn = inverter_info.get("sn", 0)
+    if sn == 0:
+        print("Error getting inverter's sn: " + inverter.name)
+        return
+
+    url = API_URL + "v1/PowerStation/GetInverterYieldRatioChartsBySn"
+    day_request = day + timedelta(days=1)
+    payload = {"sn": sn, "date": str(day_request), "type": 2}
+    response = requests.post(url, headers=headers, json=payload)
+    data = response.json().get("data")
+    pv = data.get("pv", [])
+    kWh_server = 0
+    for i in pv:
+        date = i.get("x", "")
+        if date == day.strftime("%m/%d/%Y"):
+            kWh_server = i.get("y", 0)
+            break
+
+    # get kWh from local
+    inv_kWh_day_data = get_inverter_kwh_for_day(day, inverter)
+    kWh_local = inv_kWh_day_data.get("total", 0)
+    kWh_local = float("{:.2f}".format(kWh_local))
+
+    if kWh_server != kWh_local:
+        print(
+            "{} {} server:{} <> local:{}".format(
+                day.date(), inverter.name, kWh_server, kWh_local
+            )
+        )
 
 
 def main() -> None:
