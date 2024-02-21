@@ -1,0 +1,4 @@
+![My Image](27_08_2023-FAODO_BL14.png)
+| Inversor | Dia | Potência | kWh    |
+| -------- | --- | -------- | ------ |
+| FAODO_BL14       | 2023-08-27  | 60       | 88.40 |
