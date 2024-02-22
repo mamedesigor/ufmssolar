@@ -7,7 +7,7 @@ import openpyxl
 import requests
 import xlrd
 from pyufms.config import ARGS, INVERTERS_INFO
-from pyufms.inverters import Inverter
+from pyufms.inverters import Inverter, UC
 from pyufms.plot import plot_inverter_kwh_for_day, plot_inverter_kwh_for_month
 
 API_URL = "https://www.semsportal.com/api/"
@@ -205,8 +205,9 @@ def publish_inverter_data_for_day(day: datetime, inverter: Inverter) -> None:
     image_path = plot_inverter_kwh_for_day(xlsx_path.name)
 
     # create dir for storing data
+    uc = inverter.name.split("_")[0].lower()
     dir = (
-        "data/s1/"
+        "data/{}/".format(uc)
         + str(day.year)
         + "/"
         + str(day.month)
@@ -227,13 +228,18 @@ def publish_inverter_data_for_day(day: datetime, inverter: Inverter) -> None:
     image_path.rename(image_path_new)
 
 
-def publish_s1_data_for_day(day: datetime, skip: tuple) -> None:
+def publish_uc_data_for_day(uc: UC, day: datetime, skip: tuple) -> None:
     publish_count = 0
-    publish_max = len(Inverter)
-    print("Start publishing data for s1 - " + day.strftime("%d/%m/%Y"))
+    publish_max = 0
+    print("Start publishing data for {} - ".format(uc.name) + day.strftime("%d/%m/%Y"))
     for inverter in Inverter:
         if inverter in skip:
             continue
+
+        if uc.name != inverter.name.split("_")[0]:
+            continue
+
+        publish_max += 1
 
         inv_info = INVERTERS_INFO.get(inverter)
         if inv_info:
@@ -250,12 +256,17 @@ def publish_s1_data_for_day(day: datetime, skip: tuple) -> None:
                         print("Retrying...")
                     else:
                         break
-    print("published {}/{} inverter data for s1".format(publish_count, publish_max))
+    print(
+        "published {}/{} inverter data for {}".format(
+            publish_count, publish_max, uc.name
+        )
+    )
 
 
 def update_inverter_readme_for_day(day: datetime, inverter: Inverter) -> None:
+    uc = inverter.name.split("_")[0].lower()
     dir = (
-        "data/s1/"
+        "data/{}/".format(uc)
         + str(day.year)
         + "/"
         + str(day.month)
@@ -308,8 +319,10 @@ def update_inverter_readme_for_day(day: datetime, inverter: Inverter) -> None:
     markdown_path.write_text(markdown_str)
 
 
-def update_s1_readme_for_month(month: datetime, s1_kWh_month_data: dict) -> None:
-    dir = "data/s1/" + str(month.year) + "/" + str(month.month) + "/"
+def update_uc_readme_for_month(month: datetime, uc_kWh_month_data: dict) -> None:
+    uc = uc_kWh_month_data.get("uc")
+    uc = str(uc).lower()
+    dir = "data/{}/".format(uc) + str(month.year) + "/" + str(month.month) + "/"
     Path(dir + "plots/").mkdir(parents=True, exist_ok=True)
 
     markdown_path = Path(dir + "README.md")
@@ -317,7 +330,7 @@ def update_s1_readme_for_month(month: datetime, s1_kWh_month_data: dict) -> None
     summary += "| Inversor | kWh    |\n| -------- | ------ |\n"
     plots = "# Geração Mensal por Inversor\n"
 
-    inverters = s1_kWh_month_data.get("inverters", {})
+    inverters = uc_kWh_month_data.get("inverters", {})
 
     for inverter in inverters.keys():
         inv_kWh_month_data = inverters.get(inverter, {})
@@ -336,30 +349,35 @@ def update_s1_readme_for_month(month: datetime, s1_kWh_month_data: dict) -> None
         )
         plots += plot_line
 
-    kWh_total = s1_kWh_month_data.get("total", 0)
+    kWh_total = uc_kWh_month_data.get("total", 0)
     summary_line = "| {}       | {:.2f} |\n".format("kWh_total", kWh_total)
     summary += summary_line
 
     markdown_path.write_text(summary + plots)
 
 
-def get_s1_kwh_for_month(month: datetime, skip: tuple) -> dict:
-    s1_kWh_month_data = {}
+def get_uc_kwh_for_month(uc: UC, month: datetime, skip: tuple) -> dict:
+    uc_kWh_month_data = {}
     inverters = {}
     kWh_total = 0
 
     for inverter in Inverter:
         if inverter in skip:
             continue
+
+        if uc.name != inverter.name.split("_")[0]:
+            continue
+
         inv_kWh_month_data = get_inverter_kwh_for_month(month, inverter)
         inv_kWh_month = inv_kWh_month_data.get("total", 0)
         inverters.update({inverter: inv_kWh_month_data})
         kWh_total += inv_kWh_month
 
-    s1_kWh_month_data.update({"inverters": inverters})
-    s1_kWh_month_data.update({"total": kWh_total})
+    uc_kWh_month_data.update({"uc": uc.name})
+    uc_kWh_month_data.update({"inverters": inverters})
+    uc_kWh_month_data.update({"total": kWh_total})
 
-    return s1_kWh_month_data
+    return uc_kWh_month_data
 
 
 def get_inverter_kwh_for_month(month: datetime, inverter: Inverter) -> dict:
@@ -465,7 +483,16 @@ def validate_inverter_kwh_for_day(day: datetime, inverter: Inverter) -> None:
 
 def main() -> None:
     skip = (Inverter.S1_BL13_2, Inverter.S1_BL4)
-    # login()
-    # publish_s1_data_for_day(datetime(2024, 1, 31), skip)
-    month = datetime(2024, 1, 1)
-    update_s1_readme_for_month(month, get_s1_kwh_for_month(month, skip))
+
+    # FAODO
+    login()
+    inverter = Inverter.FAODO_BL14
+    uc = UC.FAODO
+    month = datetime(2023, 12, 1)
+    for i in range(1, 31 + 1):
+        day = datetime(month.year, month.month, i)
+        publish_uc_data_for_day(uc, day, skip)
+        print("validating for day            {}".format(i))
+        validate_inverter_kwh_for_day(day, inverter)
+        print("\n")
+    update_uc_readme_for_month(month, get_uc_kwh_for_month(uc, month, skip))
