@@ -1,6 +1,14 @@
 from enum import Enum
 
 
+class UC(Enum):
+    S1 = 1
+    S2 = 2
+    S3 = 3
+    S4 = 4
+    FAODO = 5
+
+
 class Inverter(Enum):
     S1_BL20_1 = 1
     S1_BL20_2 = 2
@@ -17,3 +25,4 @@ class Inverter(Enum):
     S1_BL13_1 = 13
     S1_BL13_2 = 14
     S1_BL14 = 15
+    FAODO_BL14 = 16
