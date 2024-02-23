@@ -481,11 +481,71 @@ def validate_inverter_kwh_for_day(day: datetime, inverter: Inverter) -> None:
         )
 
 
+def get_inverter_fault_codes(inverter: Inverter, warning_msgs: dict) -> dict:
+    code_dict = {}
+    inverter_info = INVERTERS_INFO.get(inverter, {})
+    station_id = inverter_info.get("station_id", 0)
+    sn_local = inverter_info.get("sn", 0)
+    if station_id == 0 or sn_local == 0:
+        print("Error getting inverter's local data: " + inverter.name)
+        return code_dict
+
+    url = API_URL + "warning/PowerstationWarningsQuery"
+    payload = {"pw_id": station_id}
+    response = requests.post(url, headers=headers, json=payload)
+
+    data = response.json().get("data", {})
+    inverters = data.get("list", [])
+
+    for inverter_server in inverters:
+        sn_server = inverter_server.get("sn")
+        if sn_server == sn_local:
+            warnings = inverter_server.get("warning", [])
+            codes = []
+            for warning in warnings:
+                warning_code = warning.get("warning_code")
+                if warning_code:
+                    happen_time = warning.get("happen_time")
+                    codes.append(happen_time)
+                    codes.append(warning_code)
+                    warning_msg = warning_msgs.get(warning_code + "_warning")
+                    codes.append(warning_msg)
+                    reason_msg = warning_msgs.get(warning_code + "_reason")
+                    codes.append(reason_msg)
+                error_code = warning.get("error_code")
+                if error_code:
+                    codes.append(error_code)
+            code_dict.update({"inverter_name": inverter.name, "fault_codes": codes})
+            return code_dict
+
+    return code_dict
+
+
+def get_uc_inverter_fault_codes(uc: UC, skip: tuple) -> list:
+    warning_msgs_file = open("sems_warnings.json")
+    warning_msgs = json.load(warning_msgs_file)
+    fault_codes = []
+
+    for inverter in Inverter:
+        if inverter in skip:
+            continue
+
+        if uc.name != inverter.name.split("_")[0]:
+            continue
+
+        inv_code_dict = get_inverter_fault_codes(inverter, warning_msgs)
+        codes = inv_code_dict.get("fault_codes", [])
+        if codes:
+            fault_codes.append(inv_code_dict)
+
+    return fault_codes
+
+
 def main() -> None:
     skip = (Inverter.S1_BL13_2, Inverter.S1_BL4)
+    login()
 
     # FAODO
-    login()
     inverter = Inverter.FAODO_BL14
     uc = UC.FAODO
     month = datetime(2023, 12, 1)
@@ -496,3 +556,7 @@ def main() -> None:
         validate_inverter_kwh_for_day(day, inverter)
         print("\n")
     update_uc_readme_for_month(month, get_uc_kwh_for_month(uc, month, skip))
+
+    # Get warnings
+    uc_fault_codes = get_uc_inverter_fault_codes(UC.S1, skip)
+    print(json.dumps(uc_fault_codes, indent=4))
