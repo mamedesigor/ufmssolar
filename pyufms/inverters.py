@@ -26,3 +26,11 @@ class Inverter(Enum):
     S1_BL13_2 = 14
     S1_BL14 = 15
     FAODO_BL14 = 16
+    S3_BL22 = 17
+    S3_BL23 = 18
+    S3_BL24 = 19
+    S3_BL11_1 = 20
+    S3_BL11_2 = 21
+    S3_BL12 = 22
+    S3_BL15 = 23
+    S3_BL10 = 24
