@@ -34,3 +34,4 @@ class Inverter(Enum):
     S3_BL12 = 22
     S3_BL15 = 23
     S3_BL10 = 24
+    S4_BL7 = 25
