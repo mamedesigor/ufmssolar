@@ -14,8 +14,8 @@
 | S1_BL19       | 7089.80 |
 | S1_BL13_1       | 5203.10 |
 | S1_BL13_2       | 2950.00 |
-| S1_BL14       | 5325.30 |
-| kWh_total       | 69323.10 |
+| S1_BL14       | 5578.00 |
+| kWh_total       | 69575.80 |
 # Geração Mensal por Inversor
 ## S1_BL20_1
 ![My Image](plots/S1_BL20_1.png)
